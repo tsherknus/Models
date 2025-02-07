@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import os
 
 from keras.src.layers import InputLayer
 from tensorflow.keras.models import Sequential
@@ -12,15 +13,14 @@ from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 
-data = pd.read_csv('/Users/sherknus-family/PycharmProjects/DataAgregator/DailyStockPriceData/TSLA.csv')
+input = []
+output = []
 
-# data[:250].plot(x='Date', y='Close')
-# plt.show()
+# TODO: Create a new model that attempts to predict % change over the following 5 days
+# TODO: Get more training data, all rut 2000 data ideally.
 
 def create_tensors(df, window):
     df_to_np = df.to_numpy()
-    input = []
-    output = []
     # Sliding window on the data frame
     for i in range(len(df_to_np)-window):
         forward_pass = []
@@ -31,9 +31,25 @@ def create_tensors(df, window):
         input.append(forward_pass)
         output.append(df_to_np[i+window])
 
-    return np.array(input), np.array(output)
+# Specify the directory path
+directory_path = '/Users/sherknus-family/PycharmProjects/DataAgregator/DailyStockPriceData/'
 
-input, output = create_tensors(data['Close'], 100)
+# Loop through the directory and read all files
+for filename in os.listdir(directory_path):
+    print(filename)
+    file_path = os.path.join(directory_path, filename)
+
+    if os.path.isfile(file_path):
+        data = pd.read_csv(file_path)
+
+        # data[:250].plot(x='Date', y='Close')
+        # plt.show()
+
+        create_tensors(data['Close'], 5)
+
+input = np.array(input)
+output = np.array(output)
+
 
 training_passes = math.floor(len(input) * 0.8)
 validation_test_passes = math.floor((len(input) - training_passes) / 2)
@@ -50,20 +66,28 @@ output_test = output[training_passes+validation_test_passes:]
 # print(input_validation.shape, output_validation.shape)
 # print(input_test.shape, output_test.shape)
 
-model1 = Sequential()
-model1.add(InputLayer((100, 1)))
-model1.add(LSTM(64))
-model1.add(Dense(8, 'relu'))
-model1.add(Dense(1, 'linear'))
+model1 = None
+
+if (len(os.listdir('model1')) > 0):
+    model1 = load_model('model1/test.keras')
+else:
+    model1 = Sequential()
+    model1.add(InputLayer((5, 1)))
+    model1.add(LSTM(64))
+    model1.add(Dense(8, 'relu'))
+    model1.add(Dense(1, 'linear'))
 
 model1.summary()
 
 cp1 = ModelCheckpoint('model1/test.keras', save_best_only=True)
-model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.001), metrics=[RootMeanSquaredError()])
-model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=100, callbacks=[cp1])
+model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.00001), metrics=[RootMeanSquaredError()])
+model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=5, callbacks=[cp1])
 
-model1 = load_model('singleparam/test.keras')
+model1 = load_model('model1/test.keras')
 
 test_predictions = model1.predict(input_test).flatten()
 test_results = pd.DataFrame(data={'Test Predictions':test_predictions, 'Actuals':output_test})
-print(test_results)
+
+print(test_results[len(test_results)-50:])
+test_results[len(test_results)-50:].plot()
+plt.show()
