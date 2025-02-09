@@ -45,11 +45,13 @@ for filename in os.listdir(directory_path):
         # data[:250].plot(x='Date', y='Close')
         # plt.show()
 
-        create_tensors(data['Close'], 5)
+        create_tensors(data['Close'], 25)
 
 input = np.array(input)
 output = np.array(output)
 
+print(input.shape)
+print(output.shape)
 
 training_passes = math.floor(len(input) * 0.8)
 validation_test_passes = math.floor((len(input) - training_passes) / 2)
@@ -72,7 +74,7 @@ if (len(os.listdir('model1')) > 0):
     model1 = load_model('model1/test.keras')
 else:
     model1 = Sequential()
-    model1.add(InputLayer((5, 1)))
+    model1.add(InputLayer((25, 1)))
     model1.add(LSTM(64))
     model1.add(Dense(8, 'relu'))
     model1.add(Dense(1, 'linear'))
@@ -80,7 +82,7 @@ else:
 model1.summary()
 
 cp1 = ModelCheckpoint('model1/test.keras', save_best_only=True)
-model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.00001), metrics=[RootMeanSquaredError()])
+model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()])
 model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=5, callbacks=[cp1])
 
 model1 = load_model('model1/test.keras')
