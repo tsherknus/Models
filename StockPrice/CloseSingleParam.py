@@ -6,8 +6,8 @@ import os
 
 from keras.src.layers import InputLayer
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
@@ -32,7 +32,7 @@ def create_tensors(df, window):
         output.append(df_to_np[i+window])
 
 # Specify the directory path
-directory_path = '/Users/sherknus-family/PycharmProjects/DataAgregator/DailyStockPriceData/'
+directory_path = 'DailyStockPriceData/'
 
 # Loop through the directory and read all files
 for filename in os.listdir(directory_path):
@@ -45,7 +45,7 @@ for filename in os.listdir(directory_path):
         # data[:250].plot(x='Date', y='Close')
         # plt.show()
 
-        create_tensors(data['Close'], 25)
+        create_tensors(data['Close'], 10)
 
 input = np.array(input)
 output = np.array(output)
@@ -63,27 +63,24 @@ output_validation = output[training_passes:training_passes+validation_test_passe
 input_test = input[training_passes+validation_test_passes:]
 output_test = output[training_passes+validation_test_passes:]
 
-# print(input.shape)
-# print(input_train.shape, output_train.shape)
-# print(input_validation.shape, output_validation.shape)
-# print(input_test.shape, output_test.shape)
+print(input.shape)
+print(input_train.shape, output_train.shape)
+print(input_validation.shape, output_validation.shape)
+print(input_test.shape, output_test.shape)
 
-model1 = None
 
-if (len(os.listdir('model1')) > 0):
-    model1 = load_model('model1/test.keras')
-else:
-    model1 = Sequential()
-    model1.add(InputLayer((25, 1)))
-    model1.add(LSTM(64))
-    model1.add(Dense(8, 'relu'))
-    model1.add(Dense(1, 'linear'))
+model1 = Sequential()
+model1.add(InputLayer((10, 1)))
+model1.add(LSTM(128), dropout=0.2)
+model1.add(Dense(64, 'relu'))
+model1.add(Dropout(0.2))
+model1.add(Dense(1, 'linear'))
 
 model1.summary()
-
-cp1 = ModelCheckpoint('model1/test.keras', save_best_only=True)
-model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()])
-model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=5, callbacks=[cp1])
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True, verbose=1)
+cp1 = ModelCheckpoint('model1/test.keras', save_best_only=True, verbose=1)
+model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.001), metrics=[RootMeanSquaredError()])
+model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=50, callbacks=[early_stopping, cp1])
 
 model1 = load_model('model1/test.keras')
 
