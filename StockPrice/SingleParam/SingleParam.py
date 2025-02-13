@@ -32,7 +32,9 @@ def create_tensors(df, window):
         output.append(df_to_np[i+window])
 
 # Specify the directory path
-directory_path = 'DailyStockPriceData/'
+directory_path = '../DailyStockPriceData/'
+window_size = 10
+predictor = 'Close'
 
 # Loop through the directory and read all files
 for filename in os.listdir(directory_path):
@@ -45,7 +47,7 @@ for filename in os.listdir(directory_path):
         # data[:250].plot(x='Date', y='Close')
         # plt.show()
 
-        create_tensors(data['Close'], 10)
+        create_tensors(data[predictor], window_size)
 
 input = np.array(input)
 output = np.array(output)
@@ -68,21 +70,20 @@ print(input_train.shape, output_train.shape)
 print(input_validation.shape, output_validation.shape)
 print(input_test.shape, output_test.shape)
 
-
 model1 = Sequential()
-model1.add(InputLayer((10, 1)))
-model1.add(LSTM(128), dropout=0.2)
+model1.add(InputLayer((window_size, 1)))
+model1.add(LSTM(128, dropout=0.2))
 model1.add(Dense(64, 'relu'))
 model1.add(Dropout(0.2))
 model1.add(Dense(1, 'linear'))
 
 model1.summary()
 early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True, verbose=1)
-cp1 = ModelCheckpoint('model1/test.keras', save_best_only=True, verbose=1)
+cp1 = ModelCheckpoint('model.keras', save_best_only=True, verbose=1)
 model1.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.001), metrics=[RootMeanSquaredError()])
 model1.fit(input_train, output_train, validation_data=(input_validation, output_validation), epochs=50, callbacks=[early_stopping, cp1])
 
-model1 = load_model('model1/test.keras')
+model1 = load_model('model1.keras')
 
 test_predictions = model1.predict(input_test).flatten()
 test_results = pd.DataFrame(data={'Test Predictions':test_predictions, 'Actuals':output_test})
